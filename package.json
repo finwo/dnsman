@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "postpublish": "PACKAGE_VERSION=$(cat package.json | grep \\\"version\\\" | head -1 | awk -F: '{print $2}' | sed 's/[\",]//g' | tr -d '[[:space:]]') && npm deprecate \"dnsman@<${PACKAGE_VERSION}\" \"Rolling release, please update to ${PACKAGE_VERSION}\""
   },
   "repository": {
     "type": "git",
@@ -14,6 +15,9 @@
   "license": "MIT",
   "bin": {
     "dnsman": "./dnsman.js"
+  },
+  "funding": {
+    "url": "https://github.com/sponsors/finwo"
   },
   "dependencies": {
     "minimist": "^1.2.0",

@@ -27,22 +27,31 @@ util.compileAnswer = function (query, question, answer) {
   let answers   = Array.isArray(answer) ? answer : [answer];
   merged.answer = answers.map(entry => {
     switch (entry.type) {
+      case 'MX':
+        return {
+          'name'     : question.name,
+          'type'     : 'string' === typeof entry.type ? util.records[entry.type] : entry.type,
+          'class'    : entry['class'] || 1,
+          'ttl'      : entry.ttl || 30,
+          'priority' : entry.priority || entry.prio || undefined,
+          'exchange' : entry.exchange || entry.srv || undefined,
+        };
       case 'CNAME':
       case 'TXT':
         return {
-          'name' : question.name,
-          'type' : 'string' === typeof entry.type ? util.records[entry.type] : entry.type,
-          'class': entry['class'] || 1,
-          'ttl'  : entry.ttl || 30,
-          'data' : entry.data || entry.txt || undefined
+          'name'  : question.name,
+          'type'  : 'string' === typeof entry.type ? util.records[entry.type] : entry.type,
+          'class' : entry['class'] || 1,
+          'ttl'   : entry.ttl || 30,
+          'data'  : entry.data || entry.txt || undefined
         };
       default:
         return {
-          'name'   : question.name,
-          'type'   : 'string' === typeof entry.type ? util.records[entry.type] : entry.type,
-          'class'  : entry['class'] || 1,
-          'ttl'    : entry.ttl || 30,
-          'address': entry.address || entry.srv || question.name
+          'name'    : question.name,
+          'type'    : 'string' === typeof entry.type ? util.records[entry.type] : entry.type,
+          'class'   : entry['class'] || 1,
+          'ttl'     : entry.ttl || 30,
+          'address' : entry.address || entry.srv || question.name
         };
     }
   });
@@ -54,17 +63,25 @@ util.compileAnswer = function (query, question, answer) {
 
 util.filterRecords = function (records, question) {
   let keep = ['NS', 'CNAME'];
+  let txt  = util.records['TXT'];
   return records
     .filter(record => ((keep.indexOf(record.type) >= 0) || (util.records[record.type] === question.type)))
-    .filter(record => question.name.lastIndexOf(record.nam) >= 0)
-    .filter(record => question.name.lastIndexOf(record.nam) === (question.name.length - record.nam.length))
+    .filter(record => {
+      const q = (question.type == txt ? '.' : '') + question.name;
+      return q.lastIndexOf(record.nam) === (q.length - record.nam.length);
+    })
+    .map(record => { console.log({record,question}); return record; })
     .sort((left, right) => left.nam.length < right.nam.length ? 1 : (left.nam.length > right.nam.length) ? -1 : 0)
 };
 
 util.split = function( str ) {
   return str
-    .match(/"([^"]+)"|[^\s]+/g)
+    .match(/"([^"]*(?:""[^"]*)*)"|[^\s]+/g)
+    .map(token => {
+      if (token.substr(0,1) == '"' && token.substr(-1) == '"') {
+        token = token.substr(1,token.length-2);
+      }
+      return token;
+    })
     .map( token => token.replace(/""/g,'"') )
-    .map( token => ( token.substr(0,1) === '"' ) ? token.substr(1) : token )
-    .map( token => ( token.substr(-1)  === '"' ) ? token.substr(0,token.length-1) : token );
 };
