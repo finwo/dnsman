@@ -30,9 +30,7 @@ This server will pretend to be all-knowing, or at least for the first hop, forwa
 
 ### Matching
 
-Matching records is performed by the tailing end of the request. Assume requests always have a dot prepending their least signigicant section (not for txt requests, but we emulate they do to ensure consistent matching).
-
-
+Matching records is performed by the tailing end of the request. Assume requests always have a dot prepending their least signigicant section.
 
 | Config       | Request          | Matches |
 | ------------ | ---------------- | ------- |
