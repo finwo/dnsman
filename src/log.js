@@ -1,5 +1,7 @@
+const config = require('./config');
+
 // Logging functions
-const log = {
+module.exports = {
   error(...args) {
     console.error(...args);
   },

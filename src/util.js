@@ -67,10 +67,14 @@ util.filterRecords = function (records, question) {
   return records
     .filter(record => ((keep.indexOf(record.type) >= 0) || (util.records[record.type] === question.type)))
     .filter(record => {
-      const q = (question.type == txt ? '.' : '') + question.name;
-      return q.lastIndexOf(record.nam) === (q.length - record.nam.length);
+      const q = (question.name.substr(0,1) == '.' ? '' : '.') + question.name;
+      const idx = q.lastIndexOf(record.nam);
+      return ~idx && idx === (q.length - record.nam.length);
     })
-    .map(record => { console.log({record,question}); return record; })
+    // .map(record => {
+    //   console.log({question,record});
+    //   return record;
+    // })
     .sort((left, right) => left.nam.length < right.nam.length ? 1 : (left.nam.length > right.nam.length) ? -1 : 0)
 };
 

@@ -9,22 +9,9 @@ const dgram    = require('dgram'),
       rc       = require('rc'),
       argv     = require('minimist')(process.argv.slice(2));
 
-const util = require('./util');
-const log  = require('./log');
-
-// Show errors, don't crash
-process.on('unhandledRejection', log.error);
-
-// Default configuration
-const defaults = {
-  port            : argv.port || argv.p || process.env.PORT || 53,
-  host            : argv.host || argv.a || '127.0.0.1',
-  debug           : argv.debug || false,
-  nameservers     : [],
-  recordfile      : argv.records || argv.r || '/etc/dnsman/records',
-  fallback_timeout: 350,
-  reload_config   : false,
-};
+const util   = require('./util');
+const log    = require('./log');
+const config = require('./config');
 
 // Usage
 if ( argv.help || argv.h ) {
@@ -39,8 +26,7 @@ if ( argv.help || argv.h ) {
 }
 
 // Load the config
-let config = rc('dnsman', {...defaults}),
-    records = [];
+let records = [];
 loadRecords();
 
 // Record loader
@@ -82,10 +68,9 @@ if (config.reload_config) {
   let configFile = config.config;
   fs.watchFile(configFile, function (curr, prev) {
     try {
-      config = rc('dnsman', defaults);
+      config.reload();
     } catch (e) {
-      log.error('Could not reload config');
-      log.error(e);
+      log.error('Config reload:', e);
     }
   });
 }
@@ -114,7 +99,7 @@ function groupAddresses( output, record ) {
 // Setup the server
 const server = dgram.createSocket('udp4');
 server.on('listening', () => {
-  loginfo(`Listening on udp:${config.host}:${config.port}`);
+  log.info(`Listening on udp:${config.host}:${config.port}`);
 });
 server.on('error', (err) => {
   log.error(`An error occurred: ${err}`);
@@ -124,7 +109,7 @@ server.on('message', async (message, rinfo) => {
         question = query.question[0],
         matches  = util.filterRecords(records,question)
           .reduce(groupAddresses,[])
-          .concat(config.nameservers);
+          .concat(...config.nameservers);
 
   (function next() {
     let match = matches.shift();
@@ -138,16 +123,14 @@ server.on('message', async (message, rinfo) => {
       (function queryns( msg, ns ) {
         const sock = dgram.createSocket('udp4');
         sock.send(msg,0,msg.length,port,ns,() => {
-          fallback = setTimeout(() => {
-            toolate = true;
-            next();
-          },config.fallback_timeout);
+          fallback = setTimeout(next, config.fallback_timeout);
         });
         sock.on('error', (err) => {
           log.error(`Sock err: ${err}`);
         });
         sock.on('message', (resp) => {
           if(toolate) return;
+          toolate = true;
           clearTimeout(fallback);
           server.send(resp,0,resp.length,rinfo.port,rinfo.address);
           sock.close();
@@ -164,3 +147,6 @@ server.on('message', async (message, rinfo) => {
 
 // Actually start listening
 server.bind(config.port, config.host);
+
+// Show errors, don't crash
+process.on('unhandledRejection', console.error);
