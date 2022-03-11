@@ -1,4 +1,4 @@
-const packet = require('native-dns-packet');
+const packet = require('native-node-dns-packet');
 const util   = module.exports;
 
 util.records = Object.assign({},

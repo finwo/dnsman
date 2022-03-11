@@ -1,19 +1,19 @@
 #!/usr/bin/env node
 
-// DEBUG
-process.on('unhandledRejection', console.error);
-
 // Load dependencies
 const dgram    = require('dgram'),
       fs       = require('fs'),
       minimist = require('minimist'),
       noop     = () => {},
-      packet   = require('native-dns-packet'),
-      qs       = require('query-string'),
+      packet   = require('native-node-dns-packet'),
       rc       = require('rc'),
-      sprintf  = require('sprintf-js').sprintf,
-      util     = require('./util'),
       argv     = require('minimist')(process.argv.slice(2));
+
+const util = require('./util');
+const log  = require('./log');
+
+// Show errors, don't crash
+process.on('unhandledRejection', log.error);
 
 // Default configuration
 const defaults = {
@@ -39,7 +39,7 @@ if ( argv.help || argv.h ) {
 }
 
 // Load the config
-let config = rc('dnsman', defaults),
+let config = rc('dnsman', {...defaults}),
     records = [];
 loadRecords();
 
@@ -63,21 +63,16 @@ function loadRecords( contents ) {
   if ( contents.indexOf('\nnameserver') >= 0 ) config.nameservers = [];
   records = [];
   contents.split('\n')
-    .map( line => line.split('#').shift() )
+    .map( line => line.split('#').shift().trim() )
     .filter( line => line )
     .map( util.split )
     .forEach( tokens => {
-      let cmd = tokens.shift();
+      let cmd = tokens.shift().toLowerCase();
       (handler[cmd]||noop)(tokens);
     });
 
   records.sort( (a,b) => b.nam.length-a.nam.length);
 }
-
-// Logging functions
-console.err  = console.error;
-let logerror = (...args) => {console.err(sprintf.apply(null, args))},
-    loginfo  = (...args) => {if (config.debug) console.log(sprintf.apply(null, args))};
 
 // Config reloading
 fs.watchFile(config.recordfile, function (curr, prev) {
@@ -89,8 +84,8 @@ if (config.reload_config) {
     try {
       config = rc('dnsman', defaults);
     } catch (e) {
-      logerror('Could not reload config');
-      logerror(e);
+      log.error('Could not reload config');
+      log.error(e);
     }
   });
 }
@@ -119,11 +114,10 @@ function groupAddresses( output, record ) {
 // Setup the server
 const server = dgram.createSocket('udp4');
 server.on('listening', () => {
-  loginfo('Listening on udp:%s:%d', config.host, config.port);
+  loginfo(`Listening on udp:${config.host}:${config.port}`);
 });
 server.on('error', (err) => {
-  console.err('Nope nope nope');
-  console.err(err);
+  log.error(`An error occurred: ${err}`);
 });
 server.on('message', async (message, rinfo) => {
   const query    = packet.parse(message),
@@ -150,7 +144,7 @@ server.on('message', async (message, rinfo) => {
           },config.fallback_timeout);
         });
         sock.on('error', (err) => {
-          logerror('Sock err: %s',err);
+          log.error(`Sock err: ${err}`);
         });
         sock.on('message', (resp) => {
           if(toolate) return;

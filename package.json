@@ -2,10 +2,10 @@
   "name": "dnsman",
   "version": "0.5.0",
   "description": "",
-  "main": "index.js",
+  "main": "src/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "postpublish": "PACKAGE_VERSION=$(cat package.json | grep \\\"version\\\" | head -1 | awk -F: '{print $2}' | sed 's/[\",]//g' | tr -d '[[:space:]]') && npm deprecate \"dnsman@<${PACKAGE_VERSION}\" \"Rolling release, please update to ${PACKAGE_VERSION}\""
+    "postpublish": "PACKAGE_VERSION=$(node -e 'process.stdout.write(require(\"./package.json\").version)') && PACKAGE_NAME=$(node -e 'process.stdout.write(require(\"./package.json\").name)') && npm deprecate \"${PACKAGE_NAME}@<${PACKAGE_VERSION}\" \"Rolling release, please update to ${PACKAGE_VERSION}\""
   },
   "repository": {
     "type": "git",
@@ -14,16 +14,19 @@
   "author": "Robin Bron <robin@finwo.nl>",
   "license": "MIT",
   "bin": {
-    "dnsman": "./dnsman.js"
+    "dnsman": "./bin/dnsman"
   },
   "funding": {
     "url": "https://github.com/sponsors/finwo"
   },
+  "files": [
+    "README.md",
+    "src/",
+    "bin/"
+  ],
   "dependencies": {
-    "minimist": "^1.2.0",
-    "native-dns-packet": "^0.1.1",
-    "query-string": "^6.1.0",
-    "rc": "^1.2.8",
-    "sprintf-js": "^1.1.1"
+    "minimist": "^1.2.5",
+    "native-node-dns-packet": "^0.1.5",
+    "rc": "^1.2.8"
   }
 }
